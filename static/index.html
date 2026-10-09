@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Carbon Emissions Reporting Platform</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="vendor/chart.umd.min.js"></script>
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div>
+        <h1>Carbon Emissions Reporting Platform</h1>
+        <p class="subtitle">GHG Protocol &middot; Scope 1 & 2 tracking, versioned factors & advanced analytics</p>
+      </div>
+      <div id="health-badge" class="health-badge">loading&hellip;</div>
+    </div>
+  </header>
+
+  <main>
+    <section class="kpi-row">
+      <div class="kpi-card">
+        <span class="kpi-label" id="kpi-yoy-year">Total Emissions (tCO2e)</span>
+        <span class="kpi-value" id="kpi-total">--</span>
+        <span class="kpi-sub" id="kpi-total-change">--</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Emission Intensity (kgCO2e / t steel)</span>
+        <span class="kpi-value" id="kpi-intensity">--</span>
+        <span class="kpi-sub" id="kpi-intensity-sub">--</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Scope 1 Emissions (tCO2e)</span>
+        <span class="kpi-value" id="kpi-scope1">--</span>
+        <span class="kpi-sub" id="kpi-scope1-change">--</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Scope 2 Emissions (tCO2e)</span>
+        <span class="kpi-value" id="kpi-scope2">--</span>
+        <span class="kpi-sub" id="kpi-scope2-change">--</span>
+      </div>
+    </section>
+
+    <section class="charts-grid">
+      <div class="card chart-card wide">
+        <h2>YoY Emissions by Scope (stacked)</h2>
+        <canvas id="yoyChart"></canvas>
+      </div>
+      <div class="card chart-card">
+        <h2>Emission Hotspot by Source (%)</h2>
+        <canvas id="hotspotChart"></canvas>
+      </div>
+      <div class="card chart-card wide">
+        <h2>Monthly Emissions Trend <span id="monthly-year-label"></span></h2>
+        <p class="chart-note">Source data coverage: Scope 1 = Q1&ndash;Q2, Scope 2 = Q1&ndash;Q3, Scope 3 = full year (as provided in the GHG workbook).</p>
+        <canvas id="monthlyChart"></canvas>
+      </div>
+    </section>
+
+    <section class="panels-grid">
+      <div class="card">
+        <h2>Submit Scope 1 / 2 Record</h2>
+        <form id="record-form">
+          <label>Scope
+            <select id="f-scope" required>
+              <option value="1">Scope 1 (Direct)</option>
+              <option value="2">Scope 2 (Indirect)</option>
+            </select>
+          </label>
+          <label>Activity
+            <select id="f-activity" required></select>
+          </label>
+          <label>Section / Process
+            <input id="f-section" type="text" required placeholder="e.g. Rolling Mill" />
+          </label>
+          <label>Quantity
+            <input id="f-quantity" type="number" step="any" min="0" required placeholder="e.g. 1500" />
+          </label>
+          <label>Activity Date
+            <input id="f-date" type="date" required min="2023-01-01" />
+          </label>
+          <div id="factor-preview" class="factor-preview"></div>
+          <button type="submit">Calculate & Save Record</button>
+          <p id="record-msg" class="msg"></p>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>Submit Business Metric</h2>
+        <form id="metric-form">
+          <label>Metric Name
+            <select id="m-name" required></select>
+          </label>
+          <label>Date
+            <input id="m-date" type="date" required />
+          </label>
+          <label>Value
+            <input id="m-value" type="number" step="any" min="0" required placeholder="e.g. 50000" />
+          </label>
+          <label>Unit
+            <input id="m-unit" type="text" placeholder="e.g. tonnes" />
+          </label>
+          <button type="submit">Save Metric</button>
+          <p id="metric-msg" class="msg"></p>
+        </form>
+      </div>
+
+      <div class="card table-card">
+        <h2>Recent Emission Records</h2>
+        <div class="table-wrap">
+          <table id="records-table">
+            <thead>
+              <tr><th>ID</th><th>Date</th><th>Scope</th><th>Activity</th><th>Section</th><th>Qty</th><th>Unit</th><th>tCO2e</th><th>Status</th><th></th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card table-card">
+        <h2>Audit Log (Manual Overrides)</h2>
+        <div class="table-wrap">
+          <table id="audit-table">
+            <thead>
+              <tr><th>ID</th><th>Record</th><th>Action</th><th>Old (kgCO2e)</th><th>New (kgCO2e)</th><th>Reason</th><th>By</th><th>At</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Carbon Emissions Reporting Platform &middot; Exascale Deeptech & AI assignment prototype &middot; GHG Protocol Scope 1 & 2</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

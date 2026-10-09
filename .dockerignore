@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+*.pyo
+data/ghg_platform.db
+.git/
+.gitignore
+README.md
