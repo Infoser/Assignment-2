@@ -1,7 +1,7 @@
 from datetime import date
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import case, func
+from sqlalchemy import case, extract, func
 from sqlalchemy.orm import Session
 
 from ..database import get_db
@@ -164,10 +164,14 @@ def monthly_trend(
 ):
     """Total emissions per month for the given year (trend line)."""
     y = year or latest_activity_date(db).year
+    if db.get_bind().dialect.name == "sqlite":
+        month_expr = func.strftime("%Y-%m", EmissionRecord.activity_date)
+    else:
+        month_expr = func.to_char(EmissionRecord.activity_date, "YYYY-MM")
     q = (
-        db.query(func.strftime("%Y-%m", EmissionRecord.activity_date), EmissionRecord.scope, func.sum(effective))
-        .filter(func.strftime("%Y", EmissionRecord.activity_date) == str(y))
-        .group_by(func.strftime("%Y-%m", EmissionRecord.activity_date), EmissionRecord.scope)
+        db.query(month_expr, EmissionRecord.scope, func.sum(effective))
+        .filter(extract("year", EmissionRecord.activity_date) == y)
+        .group_by(month_expr, EmissionRecord.scope)
     )
     if scope is not None:
         q = q.filter(EmissionRecord.scope == scope)

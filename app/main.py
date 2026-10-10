@@ -44,5 +44,5 @@ def health():
     return {"status": "ok"}
 
 
-static_dir = Path(BASE_DIR) / "static"
-app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
+static_dir = Path(BASE_DIR) / "public"
+app.mount("/", StaticFiles(directory=str(static_dir), html=True, check_dir=False), name="static")

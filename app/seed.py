@@ -15,15 +15,18 @@ reproducible.
 """
 
 import hashlib
+import threading
 from datetime import date, timedelta
 
 from openpyxl import load_workbook
+from sqlalchemy import text
 
 from .database import DATA_XLSX, Base, engine, SessionLocal
 from .models import AuditLog, BusinessMetric, EmissionFactor, EmissionRecord
 
 YEAR = 2024
 HIST_YEAR = 2023
+SEED_LOCK_KEY = 918273645
 SCOPE1_QUARTER_MONTHS = {"Q1": (1, 2, 3), "Q2": (4, 5, 6)}
 SCOPE2_QUARTER_MONTHS = {"Q1": (1, 2, 3), "Q2": (4, 5, 6), "Q3": (7, 8, 9)}
 
@@ -165,27 +168,58 @@ def seed_demo_override(session):
     ))
 
 
+def _do_seed(session) -> None:
+    registry = FactorRegistry(session)
+    seed_scope1(session, registry)
+    seed_scope2(session, registry)
+    seed_scope3(session, registry)
+    seed_business_metrics(session)
+    seed_demo_override(session)
+
+
 def is_seeded() -> bool:
     with SessionLocal() as session:
         return session.query(EmissionFactor).count() > 0
 
 
 def run_seed(force: bool = False) -> None:
-    Base.metadata.create_all(engine)
-    if is_seeded() and not force:
-        return
-    if force:
-        Base.metadata.drop_all(engine)
+    """Create tables and seed if empty. Race-safe across processes: on
+    PostgreSQL the whole setup+seed runs inside one transaction guarded by an
+    advisory xact lock (works with Supabase's transaction-mode pooler), so
+    concurrent cold starts cannot double-seed."""
+    if engine.dialect.name == "postgresql":
+        with engine.begin() as conn:
+            conn.execute(text(f"SELECT pg_advisory_xact_lock({SEED_LOCK_KEY})"))
+            if force:
+                Base.metadata.drop_all(bind=conn)
+            Base.metadata.create_all(bind=conn)
+            if force or not is_seeded():
+                with SessionLocal(bind=conn) as session:
+                    _do_seed(session)
+    else:
+        if force:
+            Base.metadata.drop_all(engine)
         Base.metadata.create_all(engine)
-    with SessionLocal() as session:
-        registry = FactorRegistry(session)
-        seed_scope1(session, registry)
-        seed_scope2(session, registry)
-        seed_scope3(session, registry)
-        seed_business_metrics(session)
-        session.commit()
-        seed_demo_override(session)
-        session.commit()
+        if force or not is_seeded():
+            with SessionLocal() as session:
+                _do_seed(session)
+                session.commit()
+
+
+_seed_lock = threading.Lock()
+_seeded_flag = False
+
+
+def ensure_seeded() -> None:
+    """Cheap per-process guard so every API request can safely call it."""
+    global _seeded_flag
+    if _seeded_flag:
+        return
+    with _seed_lock:
+        if _seeded_flag:
+            return
+        run_seed()
+        _seeded_flag = True
 
 
 if __name__ == "__main__":

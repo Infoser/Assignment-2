@@ -276,6 +276,32 @@ uvicorn app.main:app --reload --port 8000
 
 Then open **http://localhost:8000**.
 
+### Option C — Hosted prototype: Vercel + Supabase (free tiers)
+
+The app runs on Vercel as a Python serverless function (dashboard + API), with the database on **Supabase Postgres** — both free tiers, full persistence.
+
+**Step 1 — Create the Supabase database**
+1. Sign up at [supabase.com](https://supabase.com) and create a new project (any name/password).
+2. Once created, go to **Project Settings → Database → Connection string → URI**.
+3. Copy the **Connection pooling** URI (port `6543`) and replace `[YOUR-PASSWORD]` with the password you chose. Example:
+   ```
+   postgresql://postgres.abcdefgh:[YOUR-PASSWORD]@aws-0-eu-central-1.pooler.supabase.com:6543/postgres
+   ```
+
+**Step 2 — Deploy to Vercel**
+1. Sign up at [vercel.com](https://vercel.com) with your GitHub account.
+2. **Add New → Project** → import the `Assignment-2` repository (framework preset: *Other* — auto-detected).
+3. Before deploying, open **Settings → Environment Variables** and add:
+   - `DATABASE_URL` = the Supabase URI from Step 1 (**required** — without it there is no persistent database)
+4. Click **Deploy**.
+
+**Step 3 — First load**
+- Open `https://<your-project>.vercel.app` — the dashboard loads from the CDN.
+- The **first API call** creates the schema in Supabase and seeds it from the bundled workbook (race-safe: concurrent cold starts cannot double-seed). This can take ~15–60 s on a cold start; subsequent calls are fast.
+- API docs (Swagger): `https://<your-project>.vercel.app/api/index.py/docs`
+
+> Local development needs no `DATABASE_URL` — the app falls back to SQLite automatically. Setting the env var switches to Postgres without any code change.
+
 ---
 
 ## 8. Project Structure
@@ -286,22 +312,27 @@ ghg-platform/
 ├── requirements.txt
 ├── Dockerfile                 ← container packaging
 ├── docker-compose.yml         ← one-command run
+├── vercel.json                ← Vercel config (function timeout + API rewrites)
 ├── .dockerignore
+├── api/
+│   ├── index.py               ← Vercel serverless entrypoint (serves app.main)
+│   └── data/
+│       └── ghg_sheet.xlsx     ← workbook bundled with the serverless function
 ├── data/
 │   ├── ghg_sheet.xlsx         ← provided GHG workbook (seed source)
-│   └── ghg_platform.db        ← SQLite DB (created at runtime)
+│   └── ghg_platform.db        ← SQLite DB (created at runtime, local/Docker)
 ├── app/
 │   ├── main.py                ← FastAPI app, static hosting, auto-seed
-│   ├── database.py            ← engine/session, paths
+│   ├── database.py            ← engine/session (SQLite or DATABASE_URL Postgres)
 │   ├── models.py              ← ORM models (4 tables)
 │   ├── schemas.py             ← Pydantic request/response models
-│   ├── seed.py                ← workbook → DB seeding
+│   ├── seed.py                ← workbook → DB seeding (race-safe)
 │   └── routers/
 │       ├── engine.py          ← calculation engine (historical accuracy)
 │       ├── records.py         ← records, overrides, audit log, factors
 │       ├── analytics.py       ← YoY, intensity, hotspot, monthly
 │       └── metrics.py         ← business metrics CRUD
-└── static/
+└── public/                    ← dashboard (Vercel CDN; served by FastAPI locally)
     ├── index.html             ← dashboard + forms
     ├── app.js                 ← fetch + Chart.js rendering
     ├── styles.css
@@ -318,4 +349,4 @@ ghg-platform/
 | **M2 — Advanced Analytics & Reporting (45)** | `/api/analytics/yoy` (§M2.1), `/api/analytics/intensity` (§M2.2), `/api/analytics/hotspot` (§M2.3), historical accuracy in `app/routers/engine.py` + `/api/factors/resolve` + expired 2023 seed factors (§3). |
 | **M3 — Core Backend API & Logic (15)** | `POST /api/records` for Scope 1 & 2 (§4), `PATCH/DELETE /api/records/{id}/override` with full `audit_log` trail (§4, visible in the dashboard's Audit Log table). |
 | **M4 — Frontend & Visualization (25)** | §6 — Scope 1 form + business-metric form, and all four mandatory visualizations driven by the analytics endpoints. |
-| **Packaging** | `Dockerfile` + `docker-compose.yml`, step-by-step run instructions in §7. |
+| **Packaging** | `Dockerfile` + `docker-compose.yml` (§7 A), local run (§7 B), hosted prototype on Vercel + Supabase (§7 C). |
