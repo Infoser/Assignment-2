@@ -218,8 +218,31 @@ Plus:
 - **Records table** — recent records with inline **Override / Revert** actions.
 - **Audit log table** — complete override history.
 
-Chart.js is served locally from `static/vendor/` — no internet required.
+### Screenshots
 
+**Dashboard — all four mandatory visualizations (stacked YoY bar, hotspot donut, intensity KPI cards, monthly trend line):**
+
+![Dashboard](docs/screenshots/dashboard.png)
+
+**Scope 1/2 form — the factor preview shows the engine will use the expired v1 (2023) factor for a 2023 activity date (historical accuracy):**
+
+![Form](docs/screenshots/form-historical-accuracy.png)
+
+**After submit — record saved with the v1 factor:**
+
+![Form submitted](docs/screenshots/record-submitted.png)
+
+**Records table with override action + Audit Log trail:**
+
+![Audit](docs/screenshots/audit-trail.png)
+
+**Auto-generated Swagger API docs:**
+
+![Swagger](docs/screenshots/swagger-docs.png)
+
+---
+
+Chart.js is served locally from `static/vendor/` — no internet required.
 ---
 
 ## 7. Running the Project
